@@ -1,154 +1,406 @@
+"""
+CodeOrbit Tech - AI Internship
+Task 1: Rule-Based Chatbot
+
+Professional Streamlit Interface
+"""
+
 import streamlit as st
-import numpy as np
-from PIL import Image
-
-from tensorflow.keras.applications import MobileNetV2
-from tensorflow.keras.applications.mobilenet_v2 import (
-    preprocess_input,
-    decode_predictions
-)
+from chatbot_engine import RuleBasedChatbot
 
 
-# Page configuration
+# ==========================================================
+# PAGE CONFIGURATION
+# ==========================================================
+
 st.set_page_config(
-    page_title="AI Image Classifier",
-    page_icon="🖼️",
+    page_title="CodeOrbit AI Assistant",
+    page_icon="🤖",
     layout="centered"
 )
 
 
-# Title
-st.title("🖼️ AI Image Classification")
+# ==========================================================
+# INITIALIZE CHATBOT
+# ==========================================================
 
-st.write(
-    "Upload an image and let the pretrained AI model "
-    "predict the object in the image."
+chatbot = RuleBasedChatbot()
+
+
+# ==========================================================
+# CUSTOM CSS
+# ==========================================================
+
+st.markdown(
+    """
+    <style>
+
+    /* Main page */
+    .main {
+        padding-top: 1rem;
+    }
+
+    /* Header */
+    .main-title {
+        text-align: center;
+        font-size: 42px;
+        font-weight: 700;
+        margin-bottom: 5px;
+    }
+
+    .subtitle {
+        text-align: center;
+        font-size: 20px;
+        margin-bottom: 5px;
+    }
+
+    .description {
+        text-align: center;
+        font-size: 14px;
+        color: #777;
+        margin-bottom: 20px;
+    }
+
+    /* Information card */
+    .project-card {
+        padding: 18px;
+        border-radius: 12px;
+        border: 1px solid #ddd;
+        margin-bottom: 20px;
+    }
+
+    /* Quick button area */
+    .quick-title {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+
+    </style>
+    """,
+    unsafe_allow_html=True
 )
 
 
-# Load pretrained model
-@st.cache_resource
-def load_model():
-    return MobileNetV2(weights="imagenet")
+# ==========================================================
+# HEADER
+# ==========================================================
 
-
-model = load_model()
-
-
-# Upload image
-uploaded_file = st.file_uploader(
-    "📤 Upload an image",
-    type=["jpg", "jpeg", "png"]
+st.markdown(
+    '<div class="main-title">🤖 CodeOrbit AI Assistant</div>',
+    unsafe_allow_html=True
 )
 
+st.markdown(
+    '<div class="subtitle">Rule-Based Chatbot</div>',
+    unsafe_allow_html=True
+)
 
-# Classification
-if uploaded_file is not None:
+st.markdown(
+    '<div class="description">'
+    'CodeOrbit Tech | Artificial Intelligence Internship | Task 1'
+    '</div>',
+    unsafe_allow_html=True
+)
 
-    image = Image.open(uploaded_file).convert("RGB")
-
-    st.subheader("📷 Uploaded Image")
-
-    st.image(
-        image,
-        caption="Uploaded Image",
-        use_container_width=True
-    )
-
-    # Resize image
-    image_resized = image.resize((224, 224))
-
-    # Convert image to NumPy array
-    image_array = np.array(image_resized)
-
-    # Add batch dimension
-    image_array = np.expand_dims(
-        image_array,
-        axis=0
-    )
-
-    # Preprocess image
-    image_array = preprocess_input(image_array)
-
-    # Make prediction
-    predictions = model.predict(
-        image_array,
-        verbose=0
-    )
-
-    # Get top 3 predictions
-    results = decode_predictions(
-        predictions,
-        top=3
-    )[0]
-
-
-    # Display predictions
-    st.subheader("🤖 Prediction Results")
-
-    for rank, (_, label, confidence) in enumerate(
-        results,
-        start=1
-    ):
-
-        display_label = label.replace(
-            "_",
-            " "
-        ).title()
-
-        st.write(
-            f"**{rank}. {display_label}**"
-        )
-
-        st.progress(
-            float(confidence)
-        )
-
-        st.caption(
-            f"Confidence: {confidence * 100:.2f}%"
-        )
-
-
-    # Main prediction
-    main_label = results[0][1].replace(
-        "_",
-        " "
-    ).title()
-
-    st.success(
-        f"🎯 Predicted Label: **{main_label}**"
-    )
-
-
-# Explanation
 st.divider()
 
-st.subheader("🧠 How the Pretrained Model Works")
 
-st.write(
-    """
-    MobileNetV2 is a pretrained image classification model.
+# ==========================================================
+# PROJECT INTRODUCTION
+# ==========================================================
 
-    It has already learned to recognize many different
-    objects from the ImageNet dataset.
-
-    When we upload an image, the image is resized and
-    converted into numbers that the model can understand.
-
-    The model analyzes visual features such as edges,
-    shapes and textures.
-
-    It then gives probabilities for different object
-    categories. The category with the highest probability
-    becomes the main predicted label.
-    """
+st.info(
+    "👋 Welcome to CodeOrbit AI Assistant! "
+    "I am a rule-based chatbot that uses predefined "
+    "keywords, conditions and responses to answer questions."
 )
 
 
-# Footer
+# ==========================================================
+# SESSION STATE
+# ==========================================================
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+
+# ==========================================================
+# SIDEBAR
+# ==========================================================
+
+with st.sidebar:
+
+    st.header("⚙️ Chat Controls")
+
+    st.write(
+        "Use the controls below to manage your chatbot session."
+    )
+
+    # Message count
+    message_count = len(st.session_state.messages)
+
+    user_messages = sum(
+        1
+        for message in st.session_state.messages
+        if message["role"] == "user"
+    )
+
+    bot_messages = sum(
+        1
+        for message in st.session_state.messages
+        if message["role"] == "assistant"
+    )
+
+    st.metric(
+        "Total Messages",
+        message_count
+    )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.metric("You", user_messages)
+
+    with col2:
+        st.metric("Bot", bot_messages)
+
+    st.divider()
+
+    # Clear chat
+    if st.button(
+        "🗑️ Clear Chat",
+        use_container_width=True
+    ):
+        st.session_state.messages = []
+        st.rerun()
+
+    st.divider()
+
+    st.subheader("📚 Project Information")
+
+    st.write("**Project:** Rule-Based Chatbot")
+    st.write("**Task:** Task 1")
+    st.write("**Organization:** CodeOrbit Tech")
+    st.write("**Technology:** Python + Streamlit")
+
+    st.divider()
+
+    st.caption(
+        "Built for CodeOrbit Tech AI Internship"
+    )
+
+
+# ==========================================================
+# QUICK QUESTIONS
+# ==========================================================
+
+st.markdown(
+    '<div class="quick-title">⚡ Quick Questions</div>',
+    unsafe_allow_html=True
+)
+
+col1, col2, col3 = st.columns(3)
+
+
+with col1:
+
+    if st.button(
+        "🤖 What is AI?",
+        use_container_width=True
+    ):
+        user_input = "What is AI?"
+
+        st.session_state.messages.append({
+            "role": "user",
+            "content": user_input
+        })
+
+        response = chatbot.get_response(user_input)
+
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": response
+        })
+
+        st.rerun()
+
+
+with col2:
+
+    if st.button(
+        "🧠 What is ML?",
+        use_container_width=True
+    ):
+        user_input = "What is Machine Learning?"
+
+        st.session_state.messages.append({
+            "role": "user",
+            "content": user_input
+        })
+
+        response = chatbot.get_response(user_input)
+
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": response
+        })
+
+        st.rerun()
+
+
+with col3:
+
+    if st.button(
+        "🐍 What is Python?",
+        use_container_width=True
+    ):
+        user_input = "What is Python?"
+
+        st.session_state.messages.append({
+            "role": "user",
+            "content": user_input
+        })
+
+        response = chatbot.get_response(user_input)
+
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": response
+        })
+
+        st.rerun()
+
+
+# ==========================================================
+# CHAT HISTORY
+# ==========================================================
+
+st.divider()
+
+st.subheader("💬 Conversation")
+
+
+if not st.session_state.messages:
+
+    st.markdown(
+        """
+        <div style="text-align:center; padding:25px;">
+            <h3>👋 Start a Conversation</h3>
+            <p>
+                Ask me something about AI, Machine Learning,
+                Python, programming or the CodeOrbit internship.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+
+# Display chat messages
+for message in st.session_state.messages:
+
+    with st.chat_message(message["role"]):
+
+        st.write(message["content"])
+
+
+# ==========================================================
+# USER INPUT
+# ==========================================================
+
+user_input = st.chat_input(
+    "💬 Type your message here..."
+)
+
+
+if user_input:
+
+    # Store user message
+    st.session_state.messages.append({
+        "role": "user",
+        "content": user_input
+    })
+
+    # Generate chatbot response
+    response = chatbot.get_response(user_input)
+
+    # Store chatbot response
+    st.session_state.messages.append({
+        "role": "assistant",
+        "content": response
+    })
+
+    # Refresh application
+    st.rerun()
+
+
+# ==========================================================
+# EXAMPLE QUESTIONS
+# ==========================================================
+
+st.divider()
+
+with st.expander("💡 Example Questions"):
+
+    st.write(
+        "Here are some questions you can ask the chatbot:"
+    )
+
+    st.markdown(
+        """
+        ### 🤖 Chatbot
+        - What is your name?
+        - Who created you?
+        - Are you human?
+        - How do you work?
+        - What is a rule-based chatbot?
+
+        ### 🧠 Artificial Intelligence
+        - What is AI?
+        - What are applications of AI?
+        - What is Machine Learning?
+        - What is Deep Learning?
+        - What is NLP?
+        - What is Computer Vision?
+        - What is Generative AI?
+        - What is a Neural Network?
+
+        ### 💻 Programming
+        - What is Python?
+        - What is C++?
+        - What is Java?
+        - What is HTML?
+        - What is CSS?
+        - What is JavaScript?
+        - What is SQL?
+        - What is Git?
+        - What is GitHub?
+        - What is API?
+
+        ### 🎓 Career & Study
+        - What skills are needed for AI?
+        - What is a career in AI?
+        - Give me interview tips.
+        - Give me study tips.
+        - Motivate me.
+
+        ### 🎓 Internship
+        - Tell me about the internship.
+        - What is Task 1?
+        - Tell me about the project.
+        - What technologies are used?
+        """
+    )
+
+
+# ==========================================================
+# FOOTER
+# ==========================================================
+
 st.divider()
 
 st.caption(
-    "CodeOrbit Tech AI Internship • Task 3 • "
-    "Pretrained Image Classification"
+    "🤖 CodeOrbit AI Assistant | "
+    "Rule-Based Chatbot | Task 1"
 )
