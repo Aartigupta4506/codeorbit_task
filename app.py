@@ -1,406 +1,538 @@
 """
 CodeOrbit Tech - AI Internship
-Task 1: Rule-Based Chatbot
+Task 2: AI Tic-Tac-Toe Game
 
-Professional Streamlit Interface
+Features:
+- User vs Computer
+- Minimax AI
+- Easy, Medium and Hard difficulty
+- Scoreboard
+- Win, Loss and Draw detection
+- New Game and Reset Score
 """
 
+import random
 import streamlit as st
-from chatbot_engine import RuleBasedChatbot
 
 
-# ==========================================================
+# ============================================================
 # PAGE CONFIGURATION
-# ==========================================================
+# ============================================================
 
 st.set_page_config(
-    page_title="CodeOrbit AI Assistant",
-    page_icon="🤖",
+    page_title="CodeOrbit AI Tic-Tac-Toe",
+    page_icon="🎮",
     layout="centered"
 )
 
 
-# ==========================================================
-# INITIALIZE CHATBOT
-# ==========================================================
+# ============================================================
+# GAME CONSTANTS
+# ============================================================
 
-chatbot = RuleBasedChatbot()
+EMPTY = ""
+PLAYER = "X"
+COMPUTER = "O"
+
+WINNING_COMBINATIONS = [
+    (0, 1, 2),
+    (3, 4, 5),
+    (6, 7, 8),
+    (0, 3, 6),
+    (1, 4, 7),
+    (2, 5, 8),
+    (0, 4, 8),
+    (2, 4, 6),
+]
 
 
-# ==========================================================
-# CUSTOM CSS
-# ==========================================================
+# ============================================================
+# INITIALIZE GAME
+# ============================================================
 
-st.markdown(
+def initialize_game():
+    """Start a new game."""
+
+    st.session_state.board = [EMPTY] * 9
+    st.session_state.game_over = False
+    st.session_state.result = ""
+    st.session_state.player_turn = True
+
+
+if "board" not in st.session_state:
+    initialize_game()
+
+
+# ============================================================
+# INITIALIZE SCORE
+# ============================================================
+
+if "player_score" not in st.session_state:
+    st.session_state.player_score = 0
+
+if "computer_score" not in st.session_state:
+    st.session_state.computer_score = 0
+
+if "draw_score" not in st.session_state:
+    st.session_state.draw_score = 0
+
+
+# ============================================================
+# CHECK WINNER
+# ============================================================
+
+def check_winner(board):
+    """Check whether there is a winner or draw."""
+
+    for a, b, c in WINNING_COMBINATIONS:
+
+        if (
+            board[a] != EMPTY
+            and board[a] == board[b]
+            and board[b] == board[c]
+        ):
+            return board[a]
+
+    if EMPTY not in board:
+        return "Draw"
+
+    return None
+
+
+# ============================================================
+# MINIMAX
+# ============================================================
+
+def minimax(board, maximizing):
+    """Calculate the best possible move using Minimax."""
+
+    result = check_winner(board)
+
+    if result == COMPUTER:
+        return 1
+
+    if result == PLAYER:
+        return -1
+
+    if result == "Draw":
+        return 0
+
+    if maximizing:
+
+        best_score = -float("inf")
+
+        for i in range(9):
+
+            if board[i] == EMPTY:
+
+                board[i] = COMPUTER
+
+                score = minimax(board, False)
+
+                board[i] = EMPTY
+
+                best_score = max(best_score, score)
+
+        return best_score
+
+    best_score = float("inf")
+
+    for i in range(9):
+
+        if board[i] == EMPTY:
+
+            board[i] = PLAYER
+
+            score = minimax(board, True)
+
+            board[i] = EMPTY
+
+            best_score = min(best_score, score)
+
+    return best_score
+
+
+# ============================================================
+# BEST MOVE
+# ============================================================
+
+def get_best_move(board):
+    """Find the best move for the computer."""
+
+    best_score = -float("inf")
+    best_move = None
+
+    for i in range(9):
+
+        if board[i] == EMPTY:
+
+            board[i] = COMPUTER
+
+            score = minimax(board, False)
+
+            board[i] = EMPTY
+
+            if score > best_score:
+
+                best_score = score
+                best_move = i
+
+    return best_move
+
+
+# ============================================================
+# EASY AI
+# ============================================================
+
+def get_easy_move(board):
+    """Select a random empty position."""
+
+    available_moves = [
+        i for i in range(9)
+        if board[i] == EMPTY
+    ]
+
+    if available_moves:
+        return random.choice(available_moves)
+
+    return None
+
+
+# ============================================================
+# MEDIUM AI
+# ============================================================
+
+def get_medium_move(board):
     """
-    <style>
+    Medium AI:
+    Sometimes uses Minimax and sometimes random move.
+    """
 
-    /* Main page */
-    .main {
-        padding-top: 1rem;
-    }
+    if random.random() < 0.6:
+        return get_best_move(board)
 
-    /* Header */
-    .main-title {
-        text-align: center;
-        font-size: 42px;
-        font-weight: 700;
-        margin-bottom: 5px;
-    }
-
-    .subtitle {
-        text-align: center;
-        font-size: 20px;
-        margin-bottom: 5px;
-    }
-
-    .description {
-        text-align: center;
-        font-size: 14px;
-        color: #777;
-        margin-bottom: 20px;
-    }
-
-    /* Information card */
-    .project-card {
-        padding: 18px;
-        border-radius: 12px;
-        border: 1px solid #ddd;
-        margin-bottom: 20px;
-    }
-
-    /* Quick button area */
-    .quick-title {
-        font-size: 18px;
-        font-weight: 600;
-        margin-bottom: 10px;
-    }
-
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+    return get_easy_move(board)
 
 
-# ==========================================================
+# ============================================================
+# COMPUTER MOVE
+# ============================================================
+
+def computer_move():
+
+    if st.session_state.game_over:
+        return
+
+    difficulty = st.session_state.difficulty
+
+    if difficulty == "Easy":
+
+        move = get_easy_move(
+            st.session_state.board
+        )
+
+    elif difficulty == "Medium":
+
+        move = get_medium_move(
+            st.session_state.board
+        )
+
+    else:
+
+        move = get_best_move(
+            st.session_state.board
+        )
+
+    if move is not None:
+
+        st.session_state.board[move] = COMPUTER
+
+    result = check_winner(
+        st.session_state.board
+    )
+
+    if result is not None:
+
+        end_game(result)
+
+    else:
+
+        st.session_state.player_turn = True
+
+
+# ============================================================
+# END GAME
+# ============================================================
+
+def end_game(result):
+
+    st.session_state.game_over = True
+    st.session_state.result = result
+    st.session_state.player_turn = False
+
+    if result == PLAYER:
+
+        st.session_state.player_score += 1
+
+    elif result == COMPUTER:
+
+        st.session_state.computer_score += 1
+
+    elif result == "Draw":
+
+        st.session_state.draw_score += 1
+
+
+# ============================================================
+# PLAYER MOVE
+# ============================================================
+
+def player_move(position):
+
+    if st.session_state.game_over:
+        return
+
+    if not st.session_state.player_turn:
+        return
+
+    if st.session_state.board[position] != EMPTY:
+        return
+
+    # Player places X
+    st.session_state.board[position] = PLAYER
+
+    result = check_winner(
+        st.session_state.board
+    )
+
+    if result is not None:
+
+        end_game(result)
+        return
+
+    # Computer's turn
+    st.session_state.player_turn = False
+
+    computer_move()
+
+
+# ============================================================
 # HEADER
-# ==========================================================
+# ============================================================
 
-st.markdown(
-    '<div class="main-title">🤖 CodeOrbit AI Assistant</div>',
-    unsafe_allow_html=True
-)
+st.title("🎮 AI Tic-Tac-Toe")
 
-st.markdown(
-    '<div class="subtitle">Rule-Based Chatbot</div>',
-    unsafe_allow_html=True
-)
-
-st.markdown(
-    '<div class="description">'
-    'CodeOrbit Tech | Artificial Intelligence Internship | Task 1'
-    '</div>',
-    unsafe_allow_html=True
+st.write(
+    "Challenge the computer in Tic-Tac-Toe "
+    "using an AI opponent."
 )
 
 st.divider()
 
 
-# ==========================================================
-# PROJECT INTRODUCTION
-# ==========================================================
-
-st.info(
-    "👋 Welcome to CodeOrbit AI Assistant! "
-    "I am a rule-based chatbot that uses predefined "
-    "keywords, conditions and responses to answer questions."
-)
-
-
-# ==========================================================
-# SESSION STATE
-# ==========================================================
-
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-
-# ==========================================================
+# ============================================================
 # SIDEBAR
-# ==========================================================
+# ============================================================
 
 with st.sidebar:
 
-    st.header("⚙️ Chat Controls")
+    st.header("⚙️ Game Settings")
 
-    st.write(
-        "Use the controls below to manage your chatbot session."
+    difficulty = st.selectbox(
+        "Select Difficulty",
+        [
+            "Easy",
+            "Medium",
+            "Hard"
+        ]
     )
 
-    # Message count
-    message_count = len(st.session_state.messages)
+    st.session_state.difficulty = difficulty
 
-    user_messages = sum(
-        1
-        for message in st.session_state.messages
-        if message["role"] == "user"
+    st.write("")
+
+    st.info(
+        "Hard mode uses the Minimax algorithm "
+        "to choose the best possible move."
     )
 
-    bot_messages = sum(
-        1
-        for message in st.session_state.messages
-        if message["role"] == "assistant"
-    )
+
+# ============================================================
+# SCOREBOARD
+# ============================================================
+
+st.subheader("🏆 Scoreboard")
+
+score1, score2, score3 = st.columns(3)
+
+with score1:
 
     st.metric(
-        "Total Messages",
-        message_count
+        "👤 You",
+        st.session_state.player_score
     )
 
-    col1, col2 = st.columns(2)
+with score2:
 
-    with col1:
-        st.metric("You", user_messages)
-
-    with col2:
-        st.metric("Bot", bot_messages)
-
-    st.divider()
-
-    # Clear chat
-    if st.button(
-        "🗑️ Clear Chat",
-        use_container_width=True
-    ):
-        st.session_state.messages = []
-        st.rerun()
-
-    st.divider()
-
-    st.subheader("📚 Project Information")
-
-    st.write("**Project:** Rule-Based Chatbot")
-    st.write("**Task:** Task 1")
-    st.write("**Organization:** CodeOrbit Tech")
-    st.write("**Technology:** Python + Streamlit")
-
-    st.divider()
-
-    st.caption(
-        "Built for CodeOrbit Tech AI Internship"
+    st.metric(
+        "🤖 Computer",
+        st.session_state.computer_score
     )
 
+with score3:
 
-# ==========================================================
-# QUICK QUESTIONS
-# ==========================================================
+    st.metric(
+        "🤝 Draws",
+        st.session_state.draw_score
+    )
 
-st.markdown(
-    '<div class="quick-title">⚡ Quick Questions</div>',
-    unsafe_allow_html=True
-)
-
-col1, col2, col3 = st.columns(3)
-
-
-with col1:
-
-    if st.button(
-        "🤖 What is AI?",
-        use_container_width=True
-    ):
-        user_input = "What is AI?"
-
-        st.session_state.messages.append({
-            "role": "user",
-            "content": user_input
-        })
-
-        response = chatbot.get_response(user_input)
-
-        st.session_state.messages.append({
-            "role": "assistant",
-            "content": response
-        })
-
-        st.rerun()
-
-
-with col2:
-
-    if st.button(
-        "🧠 What is ML?",
-        use_container_width=True
-    ):
-        user_input = "What is Machine Learning?"
-
-        st.session_state.messages.append({
-            "role": "user",
-            "content": user_input
-        })
-
-        response = chatbot.get_response(user_input)
-
-        st.session_state.messages.append({
-            "role": "assistant",
-            "content": response
-        })
-
-        st.rerun()
-
-
-with col3:
-
-    if st.button(
-        "🐍 What is Python?",
-        use_container_width=True
-    ):
-        user_input = "What is Python?"
-
-        st.session_state.messages.append({
-            "role": "user",
-            "content": user_input
-        })
-
-        response = chatbot.get_response(user_input)
-
-        st.session_state.messages.append({
-            "role": "assistant",
-            "content": response
-        })
-
-        st.rerun()
-
-
-# ==========================================================
-# CHAT HISTORY
-# ==========================================================
 
 st.divider()
 
-st.subheader("💬 Conversation")
+
+# ============================================================
+# GAME STATUS
+# ============================================================
+
+if st.session_state.game_over:
+
+    if st.session_state.result == PLAYER:
+
+        st.success("🎉 Congratulations! You Win!")
+
+    elif st.session_state.result == COMPUTER:
+
+        st.error("🤖 Computer Wins! Try Again.")
+
+    else:
+
+        st.warning("🤝 It's a Draw!")
 
 
-if not st.session_state.messages:
+else:
 
-    st.markdown(
-        """
-        <div style="text-align:center; padding:25px;">
-            <h3>👋 Start a Conversation</h3>
-            <p>
-                Ask me something about AI, Machine Learning,
-                Python, programming or the CodeOrbit internship.
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    if st.session_state.player_turn:
 
+        st.info(
+            "👉 Your turn — choose an empty square."
+        )
 
-# Display chat messages
-for message in st.session_state.messages:
+    else:
 
-    with st.chat_message(message["role"]):
-
-        st.write(message["content"])
+        st.info(
+            "🤖 Computer is making its move..."
+        )
 
 
-# ==========================================================
-# USER INPUT
-# ==========================================================
+# ============================================================
+# GAME BOARD
+# ============================================================
 
-user_input = st.chat_input(
-    "💬 Type your message here..."
-)
+for row in range(3):
+
+    columns = st.columns(3)
+
+    for col in range(3):
+
+        position = row * 3 + col
+
+        value = st.session_state.board[position]
+
+        if value == EMPTY:
+            button_text = "⬜"
+        elif value == PLAYER:
+            button_text = "❌"
+        else:
+            button_text = "⭕"
+
+        with columns[col]:
+
+            if st.button(
+                button_text,
+                key=f"cell_{position}",
+                use_container_width=True,
+                disabled=(
+                    value != EMPTY
+                    or st.session_state.game_over
+                    or not st.session_state.player_turn
+                )
+            ):
+
+                player_move(position)
+
+                st.rerun()
 
 
-if user_input:
-
-    # Store user message
-    st.session_state.messages.append({
-        "role": "user",
-        "content": user_input
-    })
-
-    # Generate chatbot response
-    response = chatbot.get_response(user_input)
-
-    # Store chatbot response
-    st.session_state.messages.append({
-        "role": "assistant",
-        "content": response
-    })
-
-    # Refresh application
-    st.rerun()
-
-
-# ==========================================================
-# EXAMPLE QUESTIONS
-# ==========================================================
+# ============================================================
+# GAME INFORMATION
+# ============================================================
 
 st.divider()
 
-with st.expander("💡 Example Questions"):
+st.subheader("📌 Game Information")
+
+info1, info2 = st.columns(2)
+
+with info1:
+
+    st.write("❌ **You:** X")
 
     st.write(
-        "Here are some questions you can ask the chatbot:"
+        f"🎯 **Difficulty:** "
+        f"{st.session_state.difficulty}"
     )
 
-    st.markdown(
-        """
-        ### 🤖 Chatbot
-        - What is your name?
-        - Who created you?
-        - Are you human?
-        - How do you work?
-        - What is a rule-based chatbot?
+with info2:
 
-        ### 🧠 Artificial Intelligence
-        - What is AI?
-        - What are applications of AI?
-        - What is Machine Learning?
-        - What is Deep Learning?
-        - What is NLP?
-        - What is Computer Vision?
-        - What is Generative AI?
-        - What is a Neural Network?
+    st.write("⭕ **Computer:** O")
 
-        ### 💻 Programming
-        - What is Python?
-        - What is C++?
-        - What is Java?
-        - What is HTML?
-        - What is CSS?
-        - What is JavaScript?
-        - What is SQL?
-        - What is Git?
-        - What is GitHub?
-        - What is API?
-
-        ### 🎓 Career & Study
-        - What skills are needed for AI?
-        - What is a career in AI?
-        - Give me interview tips.
-        - Give me study tips.
-        - Motivate me.
-
-        ### 🎓 Internship
-        - Tell me about the internship.
-        - What is Task 1?
-        - Tell me about the project.
-        - What technologies are used?
-        """
+    st.write(
+        "🧠 **AI:** Minimax"
     )
 
 
-# ==========================================================
+# ============================================================
+# CONTROL BUTTONS
+# ============================================================
+
+st.divider()
+
+button1, button2 = st.columns(2)
+
+with button1:
+
+    if st.button(
+        "🔄 New Game",
+        use_container_width=True
+    ):
+
+        initialize_game()
+        st.rerun()
+
+
+with button2:
+
+    if st.button(
+        "🗑️ Reset Score",
+        use_container_width=True
+    ):
+
+        st.session_state.player_score = 0
+        st.session_state.computer_score = 0
+        st.session_state.draw_score = 0
+
+        initialize_game()
+
+        st.rerun()
+
+
+# ============================================================
 # FOOTER
-# ==========================================================
+# ============================================================
 
 st.divider()
 
 st.caption(
-    "🤖 CodeOrbit AI Assistant | "
-    "Rule-Based Chatbot | Task 1"
+    "CodeOrbit Tech AI Internship • Task 2 • "
+    "Rule-Based / Minimax Tic-Tac-Toe"
 )
